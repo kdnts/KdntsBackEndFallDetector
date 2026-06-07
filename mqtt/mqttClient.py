@@ -7,7 +7,6 @@ from config import *
 
 lastFall = {}
 
-
 def on_connect(client, userdata, flags, rc, properties = None):
     print("MQTT connect")
 
