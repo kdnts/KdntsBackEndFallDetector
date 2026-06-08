@@ -18,4 +18,4 @@ print("backend started")
 
 @app.get("/")
 def root():
-    return{"message: backend running"}
+    return{"message": "backend running"}

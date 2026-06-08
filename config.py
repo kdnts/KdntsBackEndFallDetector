@@ -5,3 +5,8 @@ TOPIC_GPS = "devices/ESP32_FALL_001/location"
 TOPIC_FALL = "devices/ESP32_FALL_001/fall"
 
 FALL_COOLDOWN = 60
+
+DEVICES_COLLECTION = "devices"
+FALLS_COLLECTION = "falls"
+NOTIFICATIONS_COLLECTION = "notifications"
+USERS_COLLECTION = "users"

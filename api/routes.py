@@ -1,65 +1,136 @@
 from fastapi import APIRouter
 
 from api.schema import PairDeviceRequest, UnpairDeviceRequest, AddContactRequest
-from firebase.firestoreService import getDevice, pairDevice, isDeviceOwner, unpairDevice, addContact, getContact, deleteContact, getNotifications, markNotificationRead
+from firebase.firestoreService import getDevice, pairDevice, isDeviceOwner, unpairDevice, addContact, getContact, deleteContact, getNotifications, getNotification, markNotificationRead
 
 router = APIRouter()
 
 @router.post("/pair-device")
 def pair_device(request: PairDeviceRequest):
 
-    device = getDevice(request.deviceId)
+    deviceId = request.deviceId.strip()
+    if not deviceId:
+        return{"success": False, "message": "Device Id required"}
+    
+    password = request.devicePassword.strip()
+    if not password:
+        return{"success": False, "message": "Password required"}
+
+    device = getDevice(deviceId)
 
     if device is None:
-        return{"success": False, "message": "cant find device"}
+        return {"success": False, "message": "Device not found"}
     
-    if device["devicePassword"] != request.devicePassword:
-        return{"success": False, "message": "wrong password"}
+    if device.get("devicePassword") != password:
+        return {"success": False, "message": "Wrong password"}
     
-    pairDevice(
+    result = pairDevice(
         request.deviceId,
         request.userId
     )
 
-    return{"success": True}
+    if not result:
+        return {"success": False, "message": "Database error"}
+
+    return {"success": True, "data": {"message": "Device paired"}}
 
 
 @router.post("/unpair-device")
 def unpair_device(request: UnpairDeviceRequest):
 
-    if not isDeviceOwner(request.deviceId, request.userId):
-        return{"succes": False, "message": "not owner"}
+    deviceId = request.deviceId.strip()
+    if not deviceId:
+        return{"success": False, "message": "Device Id required"}
+    
+    userId = request.userId.strip()
+    if not userId:
+        return{"success": False, "message": "User Id required"}
+        
 
-    unpairDevice(
+    if not isDeviceOwner(request.deviceId, request.userId):
+        return {"success": False, "message": "Not owner"}
+
+    result = unpairDevice(
         request.deviceId, 
         request.userId
     )
 
-    return{"success": True}
+    if not result:
+        return {"success": False, "message": "Database error"}
+
+    return {"success": True, "data": {"message": "Device unpaired"}}
 
 @router.post("/contacts")
 def add_contact(request: AddContactRequest):
-    addContact(request.userId, request.name, request.phone)
 
-    return{"success": True}
+    userId = request.userId.strip()
+    if not userId:
+        return{"success": False, "message": "User Id required"}
+
+    name = request.name.strip()
+    if not name:
+        return {"success": False, "message": "Name required"}
+    
+    phone = request.phone.strip()
+    if not phone:
+        return {"success": False, "message": "Phone required"}
+        
+
+    result = addContact(request.userId, name, phone)
+
+    if not result:
+        return {"success": False, "message": "Database error"}
+
+    return {"success": True, "data": {"message": "Contact added"}}
 
 @router.get("/contacts/{userId}")
 def get_contact(userId):
 
-    return getContact(userId)
+    if not userId.strip():
+        return{"success": False, "message": "User Id required"}
+    
+    contacts = getContact(userId)
+    return {"success": True, "data": contacts}
 
-@router.delete("/contacts/{userId/{contactId}")
-def delete_contact(contactId, userId):
-    deleteContact(userId, contactId)
+@router.delete("/contacts/{userId}/{contactId}")
+def delete_contact(userId, contactId):
 
-    return {"success": True}
+    if not userId.strip():
+        return{"success": False, "message": "User Id required"}
+    
+    if not contactId.strip():
+        return{"success": False, "message": "Contact Id required"}
+    
+    result = deleteContact(userId, contactId)
+
+    if not result:
+        return {"success": False, "message": "Database error"}
+
+    return {"success": True, "data": {"message": "Contact deleted"}}
 
 @router.get("/notifications/{userId}")
 def get_notifications(userId):
-    return getNotifications(userId)
+
+    if not userId.strip():
+        return{"success": False, "message": "User Id required"}
+
+    notifications = getNotifications(userId)
+    return {"success": True, "data": notifications
+    }
 
 @router.post("/notifications/{notificationId}/read")
 def mark_read(notificationId):
-    markNotificationRead(notificationId)
 
-    return {"success": True}
+    if notificationId is None:
+        return{"success": False, "message": "Noti Id not found"}
+
+    notification = getNotification(notificationId)
+    if notification is None:
+        return{"success": False, "message": "Noti not found"}
+
+    result = markNotificationRead(notificationId)
+
+    if not result:
+        return {"success": False, "message": "Database error"}
+
+    return {"success": True, "data": {"message": "Notification marked as read"}}

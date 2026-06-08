@@ -1,34 +1,47 @@
 from firebase.firebaseClient import db
 from firebase_admin import firestore
+from config import DEVICES_COLLECTION, FALLS_COLLECTION, NOTIFICATIONS_COLLECTION, USERS_COLLECTION
 
 def updateLocation(deviceId, lat, lng):
-    docRef = db.collection("devices").document(deviceId)
+    try:
+        docRef = db.collection(DEVICES_COLLECTION).document(deviceId)
 
-    docRef.update({
-        "lastLat": lat,
-        "lastLng": lng,
-        "deviceStatus": "online",
-        "lastSeen": firestore.SERVER_TIMESTAMP})
-    
-    print("\nfirestore updated")
+        docRef.update({
+            "lastLat": lat,
+            "lastLng": lng,
+            "deviceStatus": "online",
+            "lastSeen": firestore.SERVER_TIMESTAMP})
+
+        print("\nfirestore updated")
+        return True
+
+    except Exception as e:
+        print("updateLocation error:", e)
+        return False
 
 def createFall(deviceId, lat, lng):
-    db.collection("falls").add({
-    "deviceId": deviceId,
-    "latitude": lat,
-    "longitude": lng,
-    "createdAt": firestore.SERVER_TIMESTAMP})
+    try:
+        db.collection(FALLS_COLLECTION).add({
+        "deviceId": deviceId,
+        "latitude": lat,
+        "longitude": lng,
+        "createdAt": firestore.SERVER_TIMESTAMP})
 
-    device = getDevice(deviceId)
-    userId = device.get("userId")
+        device = getDevice(deviceId)
+        userId = device.get("userId") if device is not None else None
 
-    createNotifications(userId, deviceId)
-    
-    print("\nsaving fall")  
+        createNotifications(userId, deviceId)
+
+        print("\nsaving fall")
+        return True
+
+    except Exception as e:
+        print("createFall error:", e)
+        return False
 
 def getDevice(deviceId):
     doc = (
-        db.collection("devices").document(deviceId).get()
+        db.collection(DEVICES_COLLECTION).document(deviceId).get()
         )
 
     if not doc.exists:
@@ -37,10 +50,22 @@ def getDevice(deviceId):
     return doc.to_dict()
 
 def pairDevice(deviceId, userId):
-    db.collection("devices").document(deviceId).update({"userId": userId})
+    try:
+        db.collection(DEVICES_COLLECTION).document(deviceId).update({"userId": userId})
+        return True
+
+    except Exception as e:
+        print("pairDevice error:", e)
+        return False
 
 def unpairDevice(deviceId, userId):
-    db.collection("devices").document(deviceId).update({"userId": None})
+    try:
+        db.collection(DEVICES_COLLECTION).document(deviceId).update({"userId": None})
+        return True
+
+    except Exception as e:
+        print("unpairDevice error:", e)
+        return False
 
 def isDeviceOwner(deviceId, userId):
     device = getDevice(deviceId)
@@ -51,15 +76,21 @@ def isDeviceOwner(deviceId, userId):
     return device.get("userId") == userId
 
 def addContact(userId, name, phone):
-    db.collection("users").document(userId).collection("contacts").add({
-        "name": name,
-        "phone": phone
-    })
+    try:
+        db.collection(USERS_COLLECTION).document(userId).collection("contacts").add({
+            "name": name,
+            "phone": phone
+        })
+        return True
+
+    except Exception as e:
+        print("addContact error:", e)
+        return False
 
 def getContact(userId):
     contacts = []
 
-    docs = (db.collection("users").document(userId).collection("contacts").stream())
+    docs = (db.collection(USERS_COLLECTION).document(userId).collection("contacts").stream())
 
     for doc in docs:
         data = doc.to_dict()
@@ -70,22 +101,34 @@ def getContact(userId):
     return contacts
 
 def deleteContact(userId, contactId):
-    db.collection("users").document(userId).collection("contacts").document(contactId).delete()
+    try:
+        db.collection(USERS_COLLECTION).document(userId).collection("contacts").document(contactId).delete()
+        return True
+
+    except Exception as e:
+        print("deleteContact error:", e)
+        return False
 
 def createNotifications(userId, deviceId):
-    db.collection("notifications").add({
-        "userId": userId,
-        "deviceId": deviceId,
-        "title": "Fall Detected",
-        "message": f"{deviceId} detected a fall",
-        "isRead": False,
-        "createdAt": firestore.SERVER_TIMESTAMP
-    })
+    try:
+        db.collection(NOTIFICATIONS_COLLECTION).add({
+            "userId": userId,
+            "deviceId": deviceId,
+            "title": "Fall Detected",
+            "message": f"{deviceId} detected a fall",
+            "isRead": False,
+            "createdAt": firestore.SERVER_TIMESTAMP
+        })
+        return True
+
+    except Exception as e:
+        print("createNotifications error:", e)
+        return False
 
 def getNotifications(userId):
     notifications = []
 
-    docs = (db.collection("notifications").where("userId", "==", userId).stream())
+    docs = (db.collection(NOTIFICATIONS_COLLECTION).where("userId", "==", userId).stream())
 
     for doc in docs:
         data = doc.to_dict()
@@ -94,6 +137,20 @@ def getNotifications(userId):
         notifications.append(data)
 
     return notifications
+
+def getNotification(notificationId):
+    doc = (db.collection(NOTIFICATIONS_COLLECTION).document(notificationId).get())
+
+    if not doc.exists:
+        return None
     
+    return doc.to_dict()
+
 def markNotificationRead(notificationId):
-    db.collection("notifications").document(notificationId).update({"isRead": True})
+    try:
+        db.collection(NOTIFICATIONS_COLLECTION).document(notificationId).update({"isRead": True})
+        return True
+
+    except Exception as e:
+        print("markNotificationRead error:", e)
+        return False
