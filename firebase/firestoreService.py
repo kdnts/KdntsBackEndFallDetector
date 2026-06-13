@@ -154,3 +154,18 @@ def markNotificationRead(notificationId):
     except Exception as e:
         print("markNotificationRead error:", e)
         return False
+
+def getUserDevice(userId):
+    try:
+        docs = (db.collection(DEVICES_COLLECTION).where("userId", "==", userId).limit(1).stream())
+
+        for doc in docs:
+            data = doc.to_dict()
+            data["deviceId"] = doc.id
+            return data
+        
+        return None
+    except Exception as e:
+        print("getUserDevice error", e)
+        return None
+

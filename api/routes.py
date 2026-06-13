@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from api.schema import PairDeviceRequest, UnpairDeviceRequest, AddContactRequest
-from firebase.firestoreService import getDevice, pairDevice, isDeviceOwner, unpairDevice, addContact, getContact, deleteContact, getNotifications, getNotification, markNotificationRead
+from firebase.firestoreService import getDevice, pairDevice, isDeviceOwner, unpairDevice, addContact, getContact, deleteContact, getNotifications, getNotification, markNotificationRead, getUserDevice
 
 router = APIRouter()
 
@@ -134,3 +134,14 @@ def mark_read(notificationId):
         return {"success": False, "message": "Database error"}
 
     return {"success": True, "data": {"message": "Notification marked as read"}}
+
+@router.get("/device/user/{userId}")
+def get_user_device(userId):
+    if not userId.strip():
+        return {"success": False, "message": "User Id required"}
+    device = getUserDevice(userId)
+
+    if device is None:
+        return {"success": False, "message": "No device paired"}
+    
+    return {"success": True, "data": device}
