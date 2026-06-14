@@ -2,31 +2,41 @@ from fastapi import APIRouter
 
 from api.schema import PairDeviceRequest, UnpairDeviceRequest, AddContactRequest
 from firebase.firestoreService import getDevice, pairDevice, isDeviceOwner, unpairDevice, addContact, getContact, deleteContact, getNotifications, getNotification, markNotificationRead, getUserDevice
+from auth.auth import get_current_user_id
+from fastapi import Depends
 
 router = APIRouter()
 
 @router.post("/pair-device")
-def pair_device(request: PairDeviceRequest):
+def pair_device(
+    request: PairDeviceRequest,
+    userId: str = Depends(get_current_user_id)
+    ):
 
-    deviceId = request.deviceId.strip()
+    deviceId = request.deviceId.strip() 
     if not deviceId:
-        return{"success": False, "message": "Device Id required"}
+        return {"success": False, "message": "Device Id required"}
     
+
     password = request.devicePassword.strip()
     if not password:
-        return{"success": False, "message": "Password required"}
+        return {"success": False, "message": "Password required"}
 
     device = getDevice(deviceId)
 
     if device is None:
         return {"success": False, "message": "Device not found"}
-    
+
+    # already owned check
+    if device.get("userId") is not None:
+        return {"success": False, "message": "Device already paired"}
+
     if device.get("devicePassword") != password:
         return {"success": False, "message": "Wrong password"}
     
     result = pairDevice(
-        request.deviceId,
-        request.userId
+        deviceId,
+        userId
     )
 
     if not result:
@@ -34,25 +44,23 @@ def pair_device(request: PairDeviceRequest):
 
     return {"success": True, "data": {"message": "Device paired"}}
 
-
 @router.post("/unpair-device")
-def unpair_device(request: UnpairDeviceRequest):
+def unpair_device(
+    request: UnpairDeviceRequest, 
+    userId: str = Depends(get_current_user_id)
+    ):
 
     deviceId = request.deviceId.strip()
     if not deviceId:
-        return{"success": False, "message": "Device Id required"}
+        return {"success": False, "message": "Device Id required"}
     
-    userId = request.userId.strip()
-    if not userId:
-        return{"success": False, "message": "User Id required"}
-        
 
-    if not isDeviceOwner(request.deviceId, request.userId):
+    if not isDeviceOwner(deviceId, userId):
         return {"success": False, "message": "Not owner"}
 
     result = unpairDevice(
-        request.deviceId, 
-        request.userId
+        deviceId, 
+        userId
     )
 
     if not result:

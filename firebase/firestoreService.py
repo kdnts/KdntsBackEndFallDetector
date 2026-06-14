@@ -51,7 +51,14 @@ def getDevice(deviceId):
 
 def pairDevice(deviceId, userId):
     try:
-        db.collection(DEVICES_COLLECTION).document(deviceId).update({"userId": userId})
+        ref = db.collection(DEVICES_COLLECTION).document(deviceId)
+        snap = ref.get().to_dict()
+
+        #block overwrite owner
+        if snap.get("userId") is not None:
+            return False
+        
+        ref.update({"userId": userId})
         return True
 
     except Exception as e:
